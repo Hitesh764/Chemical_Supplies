@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chemical Inventory Management</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <style>
+        .editable-cell {
+            cursor: pointer;
+        }
+
+        .hidden-editor {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border: 1px solid #ccc;
+            padding: 20px;
+            z-index: 1000;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .chemical-sec {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .squre {
+            color: gray !important;
+        }
+
+        .chemical-input {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+        }
+
+        .dot-flashing {
+            position: relative;
+            width: 12px;
+            height: 12px;
+            margin: 0 auto;
+            background: #28a745;
+            border-radius: 50%;
+            animation: dot-flashing 1s infinite linear alternate;
+        }
+
+        .dot-flashing:before, .dot-flashing:after {
+            content: '';
+            display: inline-block;
+            position: absolute;
+            top: 0;
+        }
+
+        .dot-flashing:before {
+            left: -20px;
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: dot-flashing 1s infinite alternate;
+        }
+
+        .dot-flashing:after {
+            left: 20px;
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: dot-flashing 1s infinite alternate;
+            animation-delay: .5s;
+        }
+
+        @keyframes dot-flashing {
+            0% {
+                background-color: #28a745;
+            }
+            50%, 100% {
+                background-color: #c3e6cb;
+            }
+        }
+
+        .success-tick {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .success-tick svg {
+            animation: draw 0.5s ease-in-out forwards;
+        }
+
+        @keyframes draw {
+            0% {
+                stroke-dasharray: 0 100;
+            }
+            100% {
+                stroke-dasharray: 100 0;
+            }
+        }
+
+        @media(max-width: 480px){
+            .chemical-sec{
+                display: block;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="container mt-5">
+
+        <div class="chemical-sec">
+
+            <h2>Chemical Supplies</h2>
+
+            <div class="mb-3">
+                <button class="btn btn-primary" onclick="addRow()"><i class="fas fa-plus"></i></button>
+
+                <button class="btn btn-warning" onclick="moveRowUp()"><i class="fas fa-arrow-up"></i></button>
+                <button class="btn btn-warning" onclick="moveRowDown()"><i class="fas fa-arrow-down"></i></button>
+
+                <button class="btn btn-danger" onclick="deleteRow()"><i class="fas fa-trash"></i></button>
+                <button class="btn btn-secondary" onclick="refreshData()"><i class="fas fa-sync-alt"></i></button>
+
+                <button class="btn btn-success" onclick="saveData()"><i class="fas fa-save"></i></button>
+            </div>
+
+        </div>
+
+        <table class="table table-striped table-bordered" id="chemicalTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0)">ID</th>
+                    <th onclick="sortTable(1)">Chemical Name</th>
+                    <th onclick="sortTable(2)">Vendor</th>
+
+                    <th onclick="sortTable(3)">Density <br><span class="squre">g/m<sup>3</sup></span></th>
+                    <th onclick="sortTable(4)">Viscosity <br><span class="squre">g/m<sup>2</sup></span></th>
+                    <th onclick="sortTable(5)">Packaging</th>
+
+                    <th onclick="sortTable(6)">Pack Size</th>
+                    <th onclick="sortTable(7)">Unit</th>
+                    <th onclick="sortTable(8)">Quantity</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Hidden Editor Modal -->
+    <div class="overlay" id="overlay"></div>
+    <div class="hidden-editor" id="editorModal">
+        <h4 style="color: dodgerblue;">Edit Chemical Details</h4>
+        <form id="editForm">
+
+            <div class="chemical-input">
+                <div>
+                    <label for="editChemicalName">Chemical Name:</label>
+                    <input type="text" id="editChemicalName" class="form-control" /><br />
+                </div>
+
+                <div>
+                    <label for="editVendor">Vendor:</label>
+                    <input type="text" id="editVendor" class="form-control" /><br />
+
+                </div>
+            </div>
+
+            <div class="chemical-input">
+
+                <div>
+                    <label for="editDensity">Density:</label>
+                    <input type="number" id="editDensity" class="form-control" /><br />
+                </div>
+
+                <div>
+                    <label for="editViscosity">Viscosity:</label>
+                    <input type="number" id="editViscosity" class="form-control" /><br />
+                </div>
+
+            </div>
+
+
+            <div class="chemical-input">
+
+                <div>
+                    <label for="editPackaging">Packaging:</label>
+                    <input type="text" id="editPackaging" class="form-control" /><br />
+                </div>
+
+                <div>
+
+                    <label for="editPackSize">Pack Size:</label>
+                    <input type="number" id="editPackSize" class="form-control" /><br />
+                </div>
+
+            </div>
+
+
+            <div class="chemical-input">
+
+                <div>
+                    <label for="editUnit">Unit:</label>
+                    <input type="text" id="editUnit" class="form-control" /><br />
+                </div>
+
+                <div>
+
+                    <label for="editQuantity">Quantity:</label>
+                    <input type="number" id="editQuantity" class="form-control" /><br />
+
+                </div>
+
+            </div>
+
+            <button type="button" class="btn btn-primary" onclick="saveEdit()">Save</button>
+            <button type="button" class="btn btn-secondary" onclick="closeEditor()">Cancel</button>
+        </form>
+    </div>
+
+   <!-- Save Success Modal -->
+<div id="saveAnimation" class="save-animation">
+    
+    <div class="modal fade" id="saveModal" tabindex="-1" aria-labelledby="saveModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="saveModalLabel">Saving Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="flashingDots" class="dot-flashing"></div>
+
+                    <div id="successTick" class="success-tick" style="display:none;">
+                        <svg width="100" height="100">
+                            <circle cx="50" cy="50" r="40" stroke="green" stroke-width="5" fill="none" />
+                            <path d="M30 50 L45 65 L70 40" stroke="green" stroke-width="5" fill="none" />
+                        </svg>
+                        <p>Saved Successfully!</p>
+                    </div>
+
+                    <p id="savingText">Saving Data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+        integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"
+        integrity="sha384-0pUGZvbkm6XF6gxjEnlmuGrJXVbNuzT9qBBavbLwCsOGabYfZo0T0to5eqruptLy"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
